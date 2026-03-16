@@ -1,38 +1,22 @@
-# Usa a imagem oficial do Python slim
-FROM python:3.12-slim
+# Imagem oficial da Microsoft que JÁ VEM com Linux, Python 3.10+, e Chrome/Playwright instalados e configurados
+FROM mcr.microsoft.com/playwright/python:v1.42.0-jammy
 
-# Define a pasta de trabalho
 WORKDIR /app
 
-# Variáveis de ambiente
+# Váriaveis de ambiente Render
 ENV PYTHONUNBUFFERED=1
 ENV PORT=5000
 
-# Atualiza sistema e instala dependências necessárias para o Chrome e Playwright rodarem
-RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
-    libnss3 \
-    libxss1 \
-    libasound2 \
-    fonts-liberation \
-    libappindicator3-1 \
-    xdg-utils \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copia os arquivos de requerimentos e instala
+# Atualiza pip e instala os requisitos do Python
 COPY requirements.txt .
+RUN pip install --no-cache-dir -U pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Instala o navegador do Playwright (Chromium) no Linux da nuvem
-RUN python -m playwright install chromium
-RUN python -m playwright install-deps chromium
-
-# Copia todo o código da automação para o container
+# Copia o código principal
 COPY . .
 
-# Expõe a porta que o servidor vai usar
+# Expor a porta gerada pelo Render
 EXPOSE 5000
 
-# Comando para iniciar: Gunicorn chamando a aplicação Flask no api.py
+# Inicia o app usando gunicorn na porta fornecida pelo container
 CMD gunicorn --bind 0.0.0.0:$PORT api:app
