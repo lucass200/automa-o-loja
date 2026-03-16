@@ -33,9 +33,25 @@ const countEl = document.getElementById("resultCount");
 const noticeEl = document.getElementById("notice");
 const btnAtual = document.getElementById("btnAtualizar");
 const tabs = document.querySelectorAll(".tab");
+const btnLinkCliente = document.getElementById("btnLinkCliente");
 
 let DATA = [];
 let tipoAtivo = "todos";
+
+const isModoCliente = new URLSearchParams(window.location.search).has("cliente");
+if (isModoCliente) {
+    document.body.classList.add("modo-cliente");
+}
+
+if (btnLinkCliente) {
+    btnLinkCliente.addEventListener("click", () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set("cliente", "1");
+        navigator.clipboard.writeText(url.toString());
+        btnLinkCliente.textContent = "✅ Link Copiado!";
+        setTimeout(() => { btnLinkCliente.textContent = "🔗 Copiar Link P/ Clientes"; }, 3000);
+    });
+}
 
 // ── Carga de dados ─────────────────────────────────────────
 async function carregar() {
@@ -120,6 +136,15 @@ function render(lista) {
             isS ? "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&q=80&w=800"
                 : "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&q=80&w=800";
 
+        let btnText = isS ? 'Ver Story ↗' : 'Ver Post ↗';
+        let btnHref = c.url;
+
+        if (isModoCliente) {
+            btnText = "Solicitar Acesso";
+            const zapMsg = encodeURIComponent(`Olá! Gostaria de ter acesso ao veículo que vi no repasse:\n\n*${c.title}*\nLoja: ${c.store}`);
+            btnHref = `https://wa.me/554199898832?text=${zapMsg}`;
+        }
+
         const el = document.createElement("div");
         el.className = "card" + (isS ? " story-card" : "");
         el.style.animationDelay = `${i * .06}s`;
@@ -136,7 +161,7 @@ function render(lista) {
         <p class="card-desc">${c.description}</p>
         <div class="card-footer">
           <span class="price">${c.price}</span>
-          <a href="${c.url}" target="_blank" class="ver-btn">${isS ? 'Ver Story ↗' : 'Ver Post ↗'}</a>
+          <a href="${btnHref}" target="_blank" class="ver-btn">${btnText}</a>
         </div>
         <div class="card-meta"><span>📅 ${c.date}</span>${c.likes ? `<span>❤️ ${c.likes}</span>` : ''}</div>
       </div>`;
@@ -247,12 +272,15 @@ if (btnAdicionarLoja) {
         const val = inputNovaLoja.value.trim();
         if (!val) return;
 
+        // Suporta vários @ separados por vírgula, espaço ou quebra de linha
+        const perfis = val.split(/[\n, ]+/).map(p => p.trim()).filter(p => p);
+
         btnAdicionarLoja.disabled = true;
         btnAdicionarLoja.textContent = "⏳";
         try {
             const r = await fetch("/api/lojas/add", {
                 method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ perfil: val })
+                body: JSON.stringify({ perfis: perfis })
             });
             const data = await r.json();
             if (r.ok) {

@@ -497,6 +497,8 @@
         <div class="lojas-pill">
             <div id="lojasPillContainer" style="display:inline-flex;gap:0.4rem;flex-wrap:wrap;"></div>
             <button id="btnGerenciarLojas" class="btn-atualizar" style="margin-left:0.5rem">⚙️ Gerenciar Lojas</button>
+            <button id="btnLinkCliente" class="btn-limpar"
+                style="margin-left:0.5rem; border:1px solid rgba(255,255,255,0.2)">🔗 Copiar Link P/ Clientes</button>
         </div>
     </header>
 
@@ -557,9 +559,11 @@
             <div class="modal-body">
                 <p class="muted-text">Adicione os <strong>@</strong> das lojas de repasse que deseja coletar.</p>
 
-                <div class="add-loja-form">
-                    <input type="text" id="inputNovaLoja" placeholder="Ex: @nomedaloja" autocomplete="off">
-                    <button id="btnAdicionarLoja" class="btn-primary">Adicionar</button>
+                <div class="add-loja-form" style="align-items:stretch">
+                    <textarea id="inputNovaLoja" rows="3"
+                        placeholder="Ex: @loja1, @loja2... (pode colar vários separados por vírgula ou espaço)"
+                        autocomplete="off" style="resize:vertical"></textarea>
+                    <button id="btnAdicionarLoja" class="btn-primary" style="align-self:stretch">Adicionar</button>
                 </div>
 
                 <ul id="listaLojas" class="lojas-lista">

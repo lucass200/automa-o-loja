@@ -91,18 +91,30 @@ def listar_lojas():
 def adicionar_loja():
     from flask import request
     data = request.json or {}
-    novo_perfil = data.get("perfil", "").strip().replace("@", "").lower()
     
-    if not novo_perfil:
-        return jsonify({"erro": "Perfil inválido"}), 400
+    # Suporta um perfil (string) ou vários (lista)
+    perfis_novos = []
+    if "perfis" in data and isinstance(data["perfis"], list):
+        perfis_novos = data["perfis"]
+    elif "perfil" in data:
+        perfis_novos = [data["perfil"]]
+
+    if not perfis_novos:
+        return jsonify({"erro": "Nenhum perfil informado"}), 400
         
     lojas = ler_lojas()
-    if novo_perfil in lojas:
-        return jsonify({"erro": "Loja já cadastrada"}), 400
+    adicionados = 0
+    
+    for p in perfis_novos:
+        limpo = p.strip().replace("@", "").replace("https://www.instagram.com/", "").replace("/", "").lower()
+        if limpo and limpo not in lojas:
+            lojas.append(limpo)
+            adicionados += 1
+            
+    if adicionados > 0:
+        salvar_lojas(lojas)
         
-    lojas.append(novo_perfil)
-    salvar_lojas(lojas)
-    return jsonify({"msg": f"@{novo_perfil} adicionado!", "lojas": lojas})
+    return jsonify({"msg": f"{adicionados} lojas adicionadas!", "lojas": lojas})
 
 @app.route("/api/lojas/remove", methods=["POST"])
 def remover_loja():
