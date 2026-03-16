@@ -1,0 +1,68 @@
+====================================================
+  REPASSE CENTRAL — Guia de Uso (API Version)
+====================================================
+
+ESTRUTURA DO PROJETO:
+  api.py        → Servidor Flask (API + dashboard)
+  scraper.py    → Coleta posts e stories do Instagram
+  index.html    → Interface do dashboard
+  app.js        → Lógica do frontend
+  dados.js      → Dados coletados (JS)
+  dados.json    → Dados coletados (JSON para a API)
+  imagens/      → Fotos dos carros baixadas
+  sessao_ig/    → Sessão de login do Instagram
+
+-------------------------------------------------------
+
+PASSO 1 — Instalar dependências
+
+  pip install --user playwright flask flask-cors schedule
+  python -m playwright install chromium
+
+-------------------------------------------------------
+
+PASSO 2 — Iniciar o servidor
+
+  python api.py
+
+  Acesse: http://localhost:5000
+
+-------------------------------------------------------
+
+PASSO 3 — Compartilhar com clientes (opções)
+
+  OPÇÃO A — ngrok (link temporário, grátis):
+    1. Baixe em: https://ngrok.com/download
+    2. Em outro terminal: ngrok http 5000
+    3. Copie o link (ex: https://abc123.ngrok.io)
+    4. Mande esse link para o cliente
+
+  OPÇÃO B — Railway.app (link permanente, grátis):
+    1. Instale Git e crie conta em railway.app
+    2. Suba o projeto no GitHub
+    3. Conecte o repositório no Railway
+    4. Recebe um link permanente tipo:
+       https://repasse-central.railway.app
+
+-------------------------------------------------------
+
+PASSO 4 — Adicionar mais lojas
+
+  Em "scraper.py", na lista PERFIS, adicione o @:
+
+  PERFIS = [
+      "repassesgr",
+      "cwb.repasse_",
+      "autopar.repasses",
+      "novaLoja",   <-- Adicione aqui
+  ]
+
+-------------------------------------------------------
+
+ENDPOINTS DA API:
+  GET  /            → Dashboard visual
+  GET  /api/dados   → JSON com todos os posts
+  GET  /api/status  → Status da última coleta
+  POST /api/atualizar → Dispara coleta manual
+
+====================================================

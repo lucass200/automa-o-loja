@@ -1,0 +1,18 @@
+# Ambientes Python e caches
+__pycache__/
+*.pyc
+
+# Ignorados, pois a nuvem não precisa deles
+.vscode/
+
+# Ignorar banco de imagens (Se quiser que a nuvem comece do zero)
+# O Docker vai criar a pasta "imagens" na nuvem, não precisamos subir peso morto
+# imagens/
+
+# NÃO IGNORAR A SESSÃO DO INSTAGRAM!
+# Precisamos subir a pasta sessao_ig/ para o robô da nuvem já nascer logado
+!sessao_ig/
+
+# Ignorar o dados locais se quiser que o servidor colete pela primeira vez online (opcional)
+# dados.js
+# dados.json
