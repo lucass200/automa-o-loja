@@ -67,8 +67,12 @@ function fallback() {
 }
 
 // ── Filtrar + ordenar ──────────────────────────────────────
+function removerAcentos(str) {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 function filtrar() {
-    const termo = fBusca.value.toLowerCase().trim();
+    const termo = removerAcentos(fBusca.value.trim());
     const loja = fLoja.value;
     const ordem = fOrdem.value;
 
@@ -77,10 +81,12 @@ function filtrar() {
         if (tipoAtivo === "stories" && c.tipo !== "story") return false;
         if (loja && c.store !== loja) return false;
         if (!termo) return true;
-        return c.title.toLowerCase().includes(termo)
-            || c.description.toLowerCase().includes(termo)
-            || c.store.toLowerCase().includes(termo)
-            || (c.keywords || []).some(k => k.includes(termo));
+
+        // Procura o termo ignorando acentos no título, descrição e loja
+        return removerAcentos(c.title).includes(termo)
+            || removerAcentos(c.description).includes(termo)
+            || removerAcentos(c.store).includes(termo)
+            || (c.keywords || []).some(k => removerAcentos(k).includes(termo));
     });
 
     // Ordenação
