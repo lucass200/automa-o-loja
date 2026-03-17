@@ -648,7 +648,13 @@ body.modo-cliente #filtro-loja-wrapper {
 }
 
 /* Borra textos por cima do card de forma moderada */
-body.modo-cliente .card-title,
+body.modo-cliente .card-title {
+    filter: blur(4px) !important;
+    opacity: 0.5 !important;
+    user-select: none !important;
+    pointer-events: none !important;
+}
+
 body.modo-cliente .card-desc,
 body.modo-cliente .card-meta {
     filter: blur(1px) !important;
@@ -658,15 +664,15 @@ body.modo-cliente .card-meta {
 }
 
 
-/* Efeito leve sobre a imagem — dá pra ver o carro mas não os detalhes */
+/* Efeito sobre a imagem — visível mas embaçada */
 body.modo-cliente .card-img::after {
     content: '';
     display: block;
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, 0.05);
-    backdrop-filter: blur(1px);
-    -webkit-backdrop-filter: blur(1px);
+    background: rgba(15, 23, 42, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     z-index: 10;
 }
 
