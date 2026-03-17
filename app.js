@@ -150,7 +150,7 @@ function render(lista) {
         if (isModoCliente) {
             btnText = "ACESSAR DETALHES 🚀";
             const zapMsg = encodeURIComponent(`Olá! Gostaria de ter acesso aos detalhes deste veículo que vi no Repasse Central:\n\n🚗 *${c.title}*\n🏪 Loja: ${c.store}\n💰 Preço aprox: ${c.price}`);
-            btnHref = `https://wa.me/554199898832?text=${zapMsg}`;
+            btnHref = `https://wa.me/5541991211030?text=${zapMsg}`;
         }
 
         const el = document.createElement("div");
