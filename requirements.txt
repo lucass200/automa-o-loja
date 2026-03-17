@@ -3,3 +3,4 @@ flask-cors
 playwright
 schedule
 gunicorn
+gevent

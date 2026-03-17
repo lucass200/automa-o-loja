@@ -5,7 +5,8 @@ WORKDIR /app
 
 # Váriaveis de ambiente Render
 ENV PYTHONUNBUFFERED=1
-ENV PORT=5000
+ENV PORT=10000
+# Render injeta PORT automaticamente — o valor acima é só fallback local
 
 # Atualiza pip e instala os requisitos do Python
 COPY requirements.txt .
@@ -19,4 +20,4 @@ COPY . .
 EXPOSE 5000
 
 # Inicia o app usando gunicorn na porta fornecida pelo container
-CMD gunicorn --bind 0.0.0.0:$PORT api:app
+CMD gunicorn --bind 0.0.0.0:$PORT --timeout 600 --workers 1 --worker-class gevent api:app
