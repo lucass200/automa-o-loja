@@ -32,13 +32,18 @@ const statusEl = document.getElementById("statusInfo");
 const countEl = document.getElementById("resultCount");
 const noticeEl = document.getElementById("notice");
 const btnAtual = document.getElementById("btnAtualizar");
-const tabs = document.querySelectorAll(".tab");
+const tabs = document.querySelectorAll(".tabs .tab");
 const btnLinkCliente = document.getElementById("btnLinkCliente");
 
 let DATA = [];
 let tipoAtivo = "todos";
 
-const isModoCliente = new URLSearchParams(window.location.search).has("cliente");
+// Modo Cliente via URL, Sessão ou se estiver dentro de um IFRAME
+const inIframe = window.self !== window.top;
+const isModoCliente = new URLSearchParams(window.location.search).has("cliente") ||
+    sessionStorage.getItem("modo-cliente") === "1" ||
+    inIframe;
+
 if (isModoCliente) {
     document.body.classList.add("modo-cliente");
 }
@@ -48,8 +53,9 @@ if (btnLinkCliente) {
         const url = new URL(window.location.href);
         url.searchParams.set("cliente", "1");
         navigator.clipboard.writeText(url.toString());
-        btnLinkCliente.textContent = "✅ Link Copiado!";
-        setTimeout(() => { btnLinkCliente.textContent = "🔗 Copiar Link P/ Clientes"; }, 3000);
+        alert("Link copiado para a área de transferência! Ativando modo visualização para teste...");
+        sessionStorage.setItem("modo-cliente", "1");
+        window.location.reload();
     });
 }
 
@@ -140,8 +146,8 @@ function render(lista) {
         let btnHref = c.url;
 
         if (isModoCliente) {
-            btnText = "Solicitar Acesso";
-            const zapMsg = encodeURIComponent(`Olá! Gostaria de ter acesso ao veículo que vi no repasse:\n\n*${c.title}*\nLoja: ${c.store}`);
+            btnText = "ACESSAR DETALHES 🚀";
+            const zapMsg = encodeURIComponent(`Olá! Gostaria de ter acesso aos detalhes deste veículo que vi no Repasse Central:\n\n🚗 *${c.title}*\n🏪 Loja: ${c.store}\n💰 Preço aprox: ${c.price}`);
             btnHref = `https://wa.me/554199898832?text=${zapMsg}`;
         }
 
