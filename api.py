@@ -130,6 +130,55 @@ def remover_loja():
     
     return jsonify({"erro": "Loja não encontrada"}), 404
 
+# ── Adicionar post externo (Make/Zapier/etc) ──────────────────
+
+@app.route("/api/posts/add", methods=["POST"])
+def adicionar_post():
+    """Recebe um post externo (ex: Make) e adiciona ao dados.json."""
+    from flask import request
+    data = request.json or {}
+
+    titulo = data.get("title", "").strip()
+    if not titulo:
+        return jsonify({"erro": "Campo 'title' obrigatório"}), 400
+
+    novo = {
+        "id":          data.get("id") or f"ext_{int(datetime.now().timestamp())}",
+        "tipo":        data.get("tipo", "post"),
+        "store":       data.get("store", "@externo"),
+        "title":       titulo,
+        "description": data.get("description", ""),
+        "price":       data.get("price", "Consulte"),
+        "image":       data.get("image", ""),
+        "url":         data.get("url", ""),
+        "date":        data.get("date") or datetime.now().strftime("%d/%m/%Y"),
+        "likes":       data.get("likes", 0),
+        "keywords":    data.get("keywords", titulo.lower().split()),
+    }
+
+    # Carrega dados existentes
+    dados = []
+    if os.path.exists(DADOS_JSON):
+        try:
+            with open(DADOS_JSON, "r", encoding="utf-8") as f:
+                dados = json.load(f)
+        except Exception:
+            dados = []
+
+    # Evita duplicatas pelo id
+    if any(d.get("id") == novo["id"] for d in dados):
+        return jsonify({"msg": "Post já existe", "id": novo["id"]}), 200
+
+    dados.insert(0, novo)  # mais recente primeiro
+
+    with open(DADOS_JSON, "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=2)
+
+    scraper_status["total_posts"] = sum(1 for d in dados if d.get("tipo") == "post")
+    scraper_status["total_stories"] = sum(1 for d in dados if d.get("tipo") == "story")
+
+    return jsonify({"msg": "Post adicionado!", "id": novo["id"]}), 201
+
 # ── Ações Scraper ─────────────────────────────────────────────
 
 @app.route("/api/atualizar", methods=["POST"])
