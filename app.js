@@ -101,6 +101,8 @@ function filtrar() {
     let lista = DATA.filter(c => {
         if (tipoAtivo === "posts" && c.tipo !== "post") return false;
         if (tipoAtivo === "stories" && c.tipo !== "story") return false;
+        if (isModoCliente && c.tipo === "story") return false;
+        if (isModoCliente && c.tipo === "post" && !/\b(19|20)\d{2}\b/.test(c.title)) return false;
         if (loja && c.store !== loja) return false;
         if (!termo) return true;
 
