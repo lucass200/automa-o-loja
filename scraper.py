@@ -16,6 +16,10 @@ Próximas vezes: login já está salvo. Só python scraper.py
 """
 
 import json, os, re, time
+try:
+    import db as _db
+except Exception:
+    _db = None
 from playwright.sync_api import sync_playwright
 
 PERFIS = [
@@ -131,13 +135,6 @@ def coletar_perfil_rapido(page, perfil):
                 img_src = page.locator('[role="dialog"] img, article img').first.get_attribute("src", timeout=2500) or ""
             except: pass
 
-            nome_img = f"{PASTA_IMAGENS}/{perfil}_{shortcode}.jpg"
-            if img_src:
-                try:
-                    r = page.request.get(img_src)
-                    with open(nome_img, "wb") as f: f.write(r.body())
-                except: nome_img = ""
-
             palavras = [w.strip('#@').lower() for w in legenda.split() if len(w)>3]
             posts.append({
                 "id":          shortcode,
@@ -146,7 +143,7 @@ def coletar_perfil_rapido(page, perfil):
                 "title":       extrair_titulo(legenda),
                 "description": legenda[:400] or "Sem descrição.",
                 "price":       extrair_preco(legenda),
-                "image":       nome_img if os.path.exists(nome_img) else "",
+                "image":       img_src,
                 "url":         link_post,
                 "date":        time.strftime("%d/%m/%Y"),
                 "likes":       0,
@@ -229,16 +226,37 @@ def salvar(dados):
     with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=2)
 
+RENDER_API = os.environ.get("RENDER_API_URL", "https://automa-o-loja.onrender.com")
+
 def carregar_lojas():
+    # 1. Tenta buscar do Render (produção) e salva localmente
     try:
-        import db
-        db.init_db()
-        lojas = db.ler_lojas()
-        if lojas:
-            return lojas
+        import urllib.request
+        with urllib.request.urlopen(f"{RENDER_API}/api/lojas", timeout=8) as r:
+            lojas = json.loads(r.read().decode())
+            if lojas:
+                print(f"   ✅ {len(lojas)} lojas carregadas do Render.")
+                # Salva localmente para manter sincronizado
+                with open("lojas.json", "w", encoding="utf-8") as f:
+                    json.dump(lojas, f, indent=2)
+                try:
+                    if _db: _db.init_db(); _db.salvar_lojas(lojas)
+                except: pass
+                return lojas
     except Exception as e:
-        print(f"⚠️ Banco indisponível, usando lojas.json: {e}")
-    # Fallback para lojas.json
+        print(f"⚠️ Render indisponível, tentando banco local: {e}")
+
+    # 2. Fallback: banco SQLite local
+    try:
+        if _db:
+            _db.init_db()
+            lojas = _db.ler_lojas()
+            if lojas:
+                return lojas
+    except Exception as e:
+        print(f"⚠️ Banco local indisponível, usando lojas.json: {e}")
+
+    # 3. Fallback final: lojas.json
     try:
         if os.path.exists("lojas.json"):
             with open("lojas.json", "r", encoding="utf-8") as f:
@@ -246,6 +264,32 @@ def carregar_lojas():
     except:
         pass
     return ["repassesgr", "cwb.repasse_", "autopar.repasses"]
+
+def enviar_para_render(todos):
+    """Adiciona posts novos no Render sem apagar os existentes."""
+    import urllib.request
+    enviados = 0
+    duplicatas = 0
+    erros = 0
+    print(f"\n📤 Enviando {len(todos)} posts para o Render (sem apagar antigos)...")
+    for post in todos:
+        try:
+            data = json.dumps(post, ensure_ascii=False).encode("utf-8")
+            req = urllib.request.Request(
+                f"{RENDER_API}/api/posts/add",
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=10) as r:
+                if r.status == 201:
+                    enviados += 1
+                else:
+                    duplicatas += 1
+        except Exception:
+            erros += 1
+    print(f"   ✅ {enviados} novos | ⏭️ {duplicatas} já existiam | ⚠️ {erros} erros")
+
 
 def coletar_dados():
     os.makedirs(PASTA_SESSAO, exist_ok=True)
@@ -265,13 +309,26 @@ def coletar_dados():
     use_headless = True if is_cloud else False
 
     with sync_playwright() as p:
-        ctx = p.chromium.launch_persistent_context(
-            user_data_dir=PASTA_SESSAO,
-            headless=use_headless,
-            args=["--start-maximized", "--no-sandbox", "--disable-setuid-sandbox"],
-            no_viewport=True,
-        )
-        page = ctx.new_page()
+        # Tenta conectar ao Chrome já aberto (debug port 9222)
+        chrome_conectado = False
+        if not is_cloud:
+            try:
+                browser = p.chromium.connect_over_cdp("http://localhost:9222")
+                ctx = browser.contexts[0] if browser.contexts else browser.new_context()
+                page = ctx.pages[0] if ctx.pages else ctx.new_page()
+                chrome_conectado = True
+                print("✅ Conectado ao Chrome existente.")
+            except Exception:
+                print("⚠️ Chrome com debug não encontrado. Abrindo nova janela...")
+
+        if not chrome_conectado:
+            ctx = p.chromium.launch_persistent_context(
+                user_data_dir=PASTA_SESSAO,
+                headless=use_headless,
+                args=["--start-maximized", "--no-sandbox", "--disable-setuid-sandbox"],
+                no_viewport=True,
+            )
+            page = ctx.new_page()
         garantir_login(page)
 
         for perfil in perfis_dinamicos:
@@ -279,12 +336,17 @@ def coletar_dados():
             todos += coletar_perfil_rapido(page, perfil)
             todos += coletar_stories_rapido(page, perfil)
 
-        ctx.close()
+        if not chrome_conectado:
+            ctx.close()
 
     salvar(todos)
     p = sum(1 for x in todos if x["tipo"]=="post")
     s = sum(1 for x in todos if x["tipo"]=="story")
     print(f"\n🎉 Concluído! {p} posts + {s} stories → dados.json")
+
+    # Envia posts para o Render automaticamente
+    enviar_para_render(todos)
+
     print("▶️  Inicie a API:  python api.py\n")
 
 if __name__ == "__main__":

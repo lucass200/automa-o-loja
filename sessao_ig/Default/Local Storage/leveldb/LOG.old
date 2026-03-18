@@ -1,2 +1,3 @@
-2026/03/18-16:29:06.358 4ea8 Creating DB C:\Users\João\Desktop\automa-o-loja\sessao_ig\Default\Local Storage\leveldb since it was missing.
-2026/03/18-16:29:06.382 4ea8 Reusing MANIFEST C:\Users\João\Desktop\automa-o-loja\sessao_ig\Default\Local Storage\leveldb/MANIFEST-000001
+2026/03/18-17:03:24.609 e04 Reusing MANIFEST C:\Users\João\Desktop\automa-o-loja\sessao_ig\Default\Local Storage\leveldb/MANIFEST-000001
+2026/03/18-17:03:24.617 e04 Recovering log #3
+2026/03/18-17:03:24.619 e04 Reusing old log C:\Users\João\Desktop\automa-o-loja\sessao_ig\Default\Local Storage\leveldb/000003.log 

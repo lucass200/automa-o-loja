@@ -1,3 +1,5 @@
-2026/03/18-16:50:17.986 68a0 Reusing MANIFEST C:\Users\João\Desktop\automa-o-loja\sessao_ig\Default\Local Storage\leveldb/MANIFEST-000001
-2026/03/18-16:50:17.993 68a0 Recovering log #3
-2026/03/18-16:50:17.996 68a0 Reusing old log C:\Users\João\Desktop\automa-o-loja\sessao_ig\Default\Local Storage\leveldb/000003.log 
+2026/03/18-17:10:17.192 7238 Reusing MANIFEST C:\Users\João\Desktop\automa-o-loja\sessao_ig\Default\Local Storage\leveldb/MANIFEST-000001
+2026/03/18-17:10:17.200 7238 Recovering log #3
+2026/03/18-17:10:17.201 7238 Level-0 table #3: started
+2026/03/18-17:10:17.211 7238 Level-0 table #3: 18678 bytes OK
+2026/03/18-17:10:17.217 7238 Delete type=0 #3

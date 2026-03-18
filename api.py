@@ -147,6 +147,20 @@ def adicionar_post():
 
     return jsonify({"msg": "Post adicionado!", "id": novo["id"]}), 201
 
+@app.route("/api/posts/sync", methods=["POST"])
+def sync_posts():
+    """Substitui todos os posts (enviado pelo scraper local)."""
+    from flask import request
+    lista = request.json
+    if not isinstance(lista, list):
+        return jsonify({"erro": "Esperado uma lista de posts"}), 400
+    db.salvar_todos_posts(lista)
+    todos = db.ler_posts()
+    scraper_status["total_posts"]   = sum(1 for d in todos if d.get("tipo") == "post")
+    scraper_status["total_stories"] = sum(1 for d in todos if d.get("tipo") == "story")
+    scraper_status["ultima_coleta"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+    return jsonify({"msg": f"{len(lista)} posts sincronizados!"}), 200
+
 # ── Ações Scraper ─────────────────────────────────────────────
 
 @app.route("/api/atualizar", methods=["POST"])
