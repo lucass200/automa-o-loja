@@ -231,6 +231,15 @@ def salvar(dados):
 
 def carregar_lojas():
     try:
+        import db
+        db.init_db()
+        lojas = db.ler_lojas()
+        if lojas:
+            return lojas
+    except Exception as e:
+        print(f"⚠️ Banco indisponível, usando lojas.json: {e}")
+    # Fallback para lojas.json
+    try:
         if os.path.exists("lojas.json"):
             with open("lojas.json", "r", encoding="utf-8") as f:
                 return json.load(f)

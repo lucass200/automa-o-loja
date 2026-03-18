@@ -21,6 +21,7 @@ import schedule
 from datetime import datetime
 from flask import Flask, jsonify, send_from_directory, send_file
 from flask_cors import CORS
+import db
 
 # ── Config ────────────────────────────────────────────────────
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
@@ -29,6 +30,9 @@ DADOS_JSON  = os.path.join(BASE_DIR, "dados.json")  # versão JSON pura para a A
 
 app = Flask(__name__, static_folder=BASE_DIR)
 CORS(app)  # permite acesso de qualquer origem (frontend externo)
+
+# Inicializa banco de dados
+db.init_db()
 
 # ── Estado do scraper ─────────────────────────────────────────
 scraper_status = {
@@ -54,14 +58,10 @@ def static_files(filename):
 @app.route("/api/dados")
 def get_dados():
     """Retorna todos os posts e stories em JSON."""
-    if not os.path.exists(DADOS_JSON):
-        return jsonify([])
     try:
-        with open(DADOS_JSON, "r", encoding="utf-8") as f:
-            dados = json.load(f)
-        return jsonify(dados)
+        return jsonify(db.ler_posts())
     except Exception as e:
-        print(f"⚠️ Aviso: Falha ao ler dados.json na rota /api/dados: {e}")
+        print(f"⚠️ Aviso: Falha ao ler posts do banco: {e}")
         return jsonify([])
 
 @app.route("/api/status")
@@ -71,28 +71,15 @@ def get_status():
 
 # ── Gerenciamento de Lojas ────────────────────────────────────
 
-LOJAS_FILE = os.path.join(BASE_DIR, "lojas.json")
-
-def ler_lojas():
-    if not os.path.exists(LOJAS_FILE):
-        return ["repassesgr", "cwb.repasse_", "autopar.repasses"]
-    with open(LOJAS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def salvar_lojas(lista):
-    with open(LOJAS_FILE, "w", encoding="utf-8") as f:
-        json.dump(lista, f, indent=2)
-
 @app.route("/api/lojas", methods=["GET"])
 def listar_lojas():
-    return jsonify(ler_lojas())
+    return jsonify(db.ler_lojas())
 
 @app.route("/api/lojas/add", methods=["POST"])
 def adicionar_loja():
     from flask import request
     data = request.json or {}
-    
-    # Suporta um perfil (string) ou vários (lista)
+
     perfis_novos = []
     if "perfis" in data and isinstance(data["perfis"], list):
         perfis_novos = data["perfis"]
@@ -101,33 +88,27 @@ def adicionar_loja():
 
     if not perfis_novos:
         return jsonify({"erro": "Nenhum perfil informado"}), 400
-        
-    lojas = ler_lojas()
+
     adicionados = 0
-    
     for p in perfis_novos:
         limpo = p.strip().replace("@", "").replace("https://www.instagram.com/", "").replace("/", "").lower()
-        if limpo and limpo not in lojas:
-            lojas.append(limpo)
+        if limpo:
+            db.adicionar_loja(limpo)
             adicionados += 1
-            
-    if adicionados > 0:
-        salvar_lojas(lojas)
-        
-    return jsonify({"msg": f"{adicionados} lojas adicionadas!", "lojas": lojas})
+
+    return jsonify({"msg": f"{adicionados} lojas adicionadas!", "lojas": db.ler_lojas()})
 
 @app.route("/api/lojas/remove", methods=["POST"])
 def remover_loja():
     from flask import request
     data = request.json or {}
     perfil = data.get("perfil", "").strip().replace("@", "").lower()
-    
-    lojas = ler_lojas()
+
+    lojas = db.ler_lojas()
     if perfil in lojas:
-        lojas.remove(perfil)
-        salvar_lojas(lojas)
-        return jsonify({"msg": f"@{perfil} removido!", "lojas": lojas})
-    
+        db.remover_loja(perfil)
+        return jsonify({"msg": f"@{perfil} removido!", "lojas": db.ler_lojas()})
+
     return jsonify({"erro": "Loja não encontrada"}), 404
 
 # ── Adicionar post externo (Make/Zapier/etc) ──────────────────
@@ -156,26 +137,13 @@ def adicionar_post():
         "keywords":    data.get("keywords", titulo.lower().split()),
     }
 
-    # Carrega dados existentes
-    dados = []
-    if os.path.exists(DADOS_JSON):
-        try:
-            with open(DADOS_JSON, "r", encoding="utf-8") as f:
-                dados = json.load(f)
-        except Exception:
-            dados = []
-
-    # Evita duplicatas pelo id
-    if any(d.get("id") == novo["id"] for d in dados):
+    inserido = db.adicionar_post(novo)
+    if not inserido:
         return jsonify({"msg": "Post já existe", "id": novo["id"]}), 200
 
-    dados.insert(0, novo)  # mais recente primeiro
-
-    with open(DADOS_JSON, "w", encoding="utf-8") as f:
-        json.dump(dados, f, ensure_ascii=False, indent=2)
-
-    scraper_status["total_posts"] = sum(1 for d in dados if d.get("tipo") == "post")
-    scraper_status["total_stories"] = sum(1 for d in dados if d.get("tipo") == "story")
+    todos = db.ler_posts()
+    scraper_status["total_posts"]   = sum(1 for d in todos if d.get("tipo") == "post")
+    scraper_status["total_stories"] = sum(1 for d in todos if d.get("tipo") == "story")
 
     return jsonify({"msg": "Post adicionado!", "id": novo["id"]}), 201
 
@@ -207,12 +175,13 @@ def rodar_scraper():
         spec.loader.exec_module(modulo)
         modulo.coletar_dados()
 
-        # Converte dados.js → dados.json para a API consumir
-        converter_para_json()
-
-        # Atualiza status
-        with open(DADOS_JSON, "r", encoding="utf-8") as f:
-            dados = json.load(f)
+        # Salva posts no banco SQLite
+        if os.path.exists(DADOS_JSON):
+            with open(DADOS_JSON, "r", encoding="utf-8") as f:
+                dados = json.load(f)
+            db.salvar_todos_posts(dados)
+        else:
+            dados = db.ler_posts()
 
         scraper_status["ultima_coleta"]  = datetime.now().strftime("%d/%m/%Y %H:%M")
         scraper_status["total_posts"]    = sum(1 for d in dados if d.get("tipo") == "post")
