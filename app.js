@@ -43,11 +43,11 @@ const btnLinkCliente = document.getElementById("btnLinkCliente");
 let DATA = [];
 let tipoAtivo = "todos";
 
-// Modo Cliente via URL, Sessão ou se estiver dentro de um IFRAME
+// Modo Admin só com ?admin=1 — padrão é modo cliente
 const inIframe = window.self !== window.top;
-const isModoCliente = new URLSearchParams(window.location.search).has("cliente") ||
-    sessionStorage.getItem("modo-cliente") === "1" ||
-    inIframe;
+const isModoAdmin = new URLSearchParams(window.location.search).has("admin") ||
+    sessionStorage.getItem("modo-admin") === "1";
+const isModoCliente = !isModoAdmin;
 
 if (isModoCliente) {
     document.body.classList.add("modo-cliente");
@@ -56,11 +56,9 @@ if (isModoCliente) {
 if (btnLinkCliente) {
     btnLinkCliente.addEventListener("click", () => {
         const url = new URL(window.location.href);
-        url.searchParams.set("cliente", "1");
+        url.searchParams.delete("admin");
         navigator.clipboard.writeText(url.toString());
-        alert("Link copiado para a área de transferência! Ativando modo visualização para teste...");
-        sessionStorage.setItem("modo-cliente", "1");
-        window.location.reload();
+        alert("Link de cliente copiado!");
     });
 }
 
