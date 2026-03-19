@@ -3,6 +3,11 @@
  * Filtros: busca + loja + tipo + ordenação
  */
 
+// URL da API — troque para o endereço do Render em produção
+const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+  ? ""
+  : "https://automa-o-loja.onrender.com";
+
 const EXEMPLO = [
     { id: "e1", tipo: "post", store: "@repassesgr", title: "Chevrolet Zafira Elite 2012", description: "⭐ Zafira Elite completa! Teto solar, automática, bancos em couro. Raridade!", price: "R$ 38.900", image: "", url: "https://www.instagram.com/repassesgr/", date: "15/03/2026", likes: 87, keywords: ["zafira", "chevrolet", "7lugares", "automatica"] },
     { id: "e2", tipo: "post", store: "@cwb.repasse_", title: "Toyota Corolla XEI 2018", description: "✅ Corolla XEI 2.0 — único dono, revisões em dia. Repasse direto!", price: "R$ 89.900", image: "", url: "https://www.instagram.com/cwb.repasse_/", date: "14/03/2026", likes: 120, keywords: ["corolla", "toyota", "xei", "sedan"] },
@@ -62,13 +67,13 @@ if (btnLinkCliente) {
 // ── Carga de dados ─────────────────────────────────────────
 async function carregar() {
     try {
-        const r = await fetch("/api/dados");
+        const r = await fetch(API_URL + "/api/dados");
         if (!r.ok) throw new Error();
         const d = await r.json();
         DATA = d.length ? d : fallback();
         if (DATA === EXEMPLO) noticeEl.style.display = "block";
 
-        const st = await fetch("/api/status").then(x => x.json()).catch(() => null);
+        const st = await fetch(API_URL + "/api/status").then(x => x.json()).catch(() => null);
         if (st && statusEl) {
             const rodando = st.rodando;
             statusEl.innerHTML = `<span class="dot ${rodando ? "dot-y" : "dot-g"}"></span>
@@ -202,7 +207,7 @@ if (btnAtual) {
     btnAtual.addEventListener("click", async () => {
         btnAtual.disabled = true; btnAtual.textContent = "⏳ Iniciando...";
         try {
-            await fetch("/api/atualizar", { method: "POST" });
+            await fetch(API_URL + "/api/atualizar", { method: "POST" });
             btnAtual.textContent = "⏳ Coletando...";
             setTimeout(() => { carregar(); btnAtual.disabled = false; btnAtual.textContent = "🔄 Atualizar agora"; }, 8000);
         } catch {
@@ -255,7 +260,7 @@ function renderLojasUI() {
 
 async function carregarLojas() {
     try {
-        const res = await fetch("/api/lojas");
+        const res = await fetch(API_URL + "/api/lojas");
         if (res.ok) {
             lojasCadastradas = await res.json();
             renderLojasUI();
@@ -286,7 +291,7 @@ if (btnAdicionarLoja) {
         btnAdicionarLoja.disabled = true;
         btnAdicionarLoja.textContent = "⏳";
         try {
-            const r = await fetch("/api/lojas/add", {
+            const r = await fetch(API_URL + "/api/lojas/add", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ perfis: perfis })
             });
@@ -311,7 +316,7 @@ window.removerLoja = async function (perfil) {
     if (!confirm(`Tem certeza que deseja remover @${perfil}?`)) return;
 
     try {
-        const r = await fetch("/api/lojas/remove", {
+        const r = await fetch(API_URL + "/api/lojas/remove", {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ perfil })
         });
