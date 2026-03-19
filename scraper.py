@@ -229,41 +229,38 @@ def salvar(dados):
 RENDER_API = os.environ.get("RENDER_API_URL", "https://automa-o-loja.onrender.com")
 
 def carregar_lojas():
-    # 1. Tenta buscar do Render (produção) e salva localmente
+    lojas_render = []
+    lojas_local = []
+
+    # 1. Busca do Render
     try:
         import urllib.request
         with urllib.request.urlopen(f"{RENDER_API}/api/lojas", timeout=8) as r:
-            lojas = json.loads(r.read().decode())
-            if lojas:
-                print(f"   ✅ {len(lojas)} lojas carregadas do Render.")
-                # Salva localmente para manter sincronizado
-                with open("lojas.json", "w", encoding="utf-8") as f:
-                    json.dump(lojas, f, indent=2)
-                try:
-                    if _db: _db.init_db(); _db.salvar_lojas(lojas)
-                except: pass
-                return lojas
+            lojas_render = json.loads(r.read().decode())
+            print(f"   ✅ {len(lojas_render)} lojas carregadas do Render.")
     except Exception as e:
-        print(f"⚠️ Render indisponível, tentando banco local: {e}")
+        print(f"⚠️ Render indisponível: {e}")
 
-    # 2. Fallback: banco SQLite local
-    try:
-        if _db:
-            _db.init_db()
-            lojas = _db.ler_lojas()
-            if lojas:
-                return lojas
-    except Exception as e:
-        print(f"⚠️ Banco local indisponível, usando lojas.json: {e}")
-
-    # 3. Fallback final: lojas.json
+    # 2. Carrega lojas.json local
     try:
         if os.path.exists("lojas.json"):
             with open("lojas.json", "r", encoding="utf-8") as f:
-                return json.load(f)
+                lojas_local = json.load(f)
     except:
         pass
-    return ["repassesgr", "cwb.repasse_", "autopar.repasses"]
+
+    # 3. Mescla sem duplicatas
+    todas = list(dict.fromkeys(lojas_render + lojas_local))
+
+    if not todas:
+        todas = ["repassesgr", "cwb.repasse_", "autopar.repasses"]
+
+    # 4. Salva lista mesclada no lojas.json local
+    with open("lojas.json", "w", encoding="utf-8") as f:
+        json.dump(todas, f, indent=2, ensure_ascii=False)
+
+    print(f"   📋 Total de lojas para scraper: {len(todas)}")
+    return todas
 
 def enviar_para_render(todos):
     """Adiciona posts novos no Render sem apagar os existentes."""
