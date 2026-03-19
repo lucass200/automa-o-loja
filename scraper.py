@@ -262,8 +262,20 @@ def carregar_lojas():
     print(f"   📋 Total de lojas para scraper: {len(todas)}")
     return todas
 
+def _baixar_imagem_b64(url):
+    """Baixa imagem de uma URL e retorna base64."""
+    import urllib.request, base64
+    if not url:
+        return ""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            return base64.b64encode(r.read()).decode()
+    except:
+        return ""
+
 def enviar_para_render(todos):
-    """Adiciona posts novos no Render sem apagar os existentes."""
+    """Adiciona posts novos no Render sem apagar os existentes, com imagem embutida."""
     import urllib.request
     enviados = 0
     duplicatas = 0
@@ -271,14 +283,19 @@ def enviar_para_render(todos):
     print(f"\n📤 Enviando {len(todos)} posts para o Render (sem apagar antigos)...")
     for post in todos:
         try:
-            data = json.dumps(post, ensure_ascii=False).encode("utf-8")
+            payload = dict(post)
+            # Baixa imagem e envia como base64 para o Render hospedar
+            if payload.get("image") and payload["image"].startswith("http"):
+                payload["image_b64"] = _baixar_imagem_b64(payload["image"])
+
+            data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             req = urllib.request.Request(
                 f"{RENDER_API}/api/posts/add",
                 data=data,
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with urllib.request.urlopen(req, timeout=15) as r:
                 if r.status == 201:
                     enviados += 1
                 else:

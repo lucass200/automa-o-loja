@@ -23,6 +23,9 @@ from flask import Flask, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import db
 
+IMAGENS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "imagens")
+os.makedirs(IMAGENS_DIR, exist_ok=True)
+
 # ── Config ────────────────────────────────────────────────────
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 DADOS_FILE  = os.path.join(BASE_DIR, "dados.js")
@@ -113,15 +116,35 @@ def remover_loja():
 
 # ── Adicionar post externo (Make/Zapier/etc) ──────────────────
 
+@app.route("/api/imagens/<path:filename>")
+def servir_imagem(filename):
+    return send_from_directory(IMAGENS_DIR, filename)
+
 @app.route("/api/posts/add", methods=["POST"])
 def adicionar_post():
-    """Recebe um post externo (ex: Make) e adiciona ao dados.json."""
+    """Recebe um post externo (ex: Make/scraper) e adiciona."""
     from flask import request
     data = request.json or {}
 
     titulo = data.get("title", "").strip()
     if not titulo:
         return jsonify({"erro": "Campo 'title' obrigatório"}), 400
+
+    # Salva imagem base64 se enviada
+    image_url = data.get("image", "")
+    image_b64 = data.get("image_b64", "")
+    if image_b64:
+        try:
+            import base64, hashlib
+            img_bytes = base64.b64decode(image_b64)
+            post_id = data.get("id") or f"ext_{int(datetime.now().timestamp())}"
+            fname = hashlib.md5(post_id.encode()).hexdigest() + ".jpg"
+            fpath = os.path.join(IMAGENS_DIR, fname)
+            with open(fpath, "wb") as f:
+                f.write(img_bytes)
+            image_url = f"/api/imagens/{fname}"
+        except Exception as e:
+            print(f"⚠️ Erro ao salvar imagem: {e}")
 
     novo = {
         "id":          data.get("id") or f"ext_{int(datetime.now().timestamp())}",
@@ -130,7 +153,7 @@ def adicionar_post():
         "title":       titulo,
         "description": data.get("description", ""),
         "price":       data.get("price", "Consulte"),
-        "image":       data.get("image", ""),
+        "image":       image_url,
         "url":         data.get("url", ""),
         "date":        data.get("date") or datetime.now().strftime("%d/%m/%Y"),
         "likes":       data.get("likes", 0),
