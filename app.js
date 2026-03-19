@@ -6,7 +6,7 @@
 // URL da API — troque para o endereço do Render em produção
 const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
   ? ""
-  : "https://automa-o-loja.onrender.com";
+  : "https://advogadoararaquara.com.br";
 
 const EXEMPLO = [
     { id: "e1", tipo: "post", store: "@repassesgr", title: "Chevrolet Zafira Elite 2012", description: "⭐ Zafira Elite completa! Teto solar, automática, bancos em couro. Raridade!", price: "R$ 38.900", image: "", url: "https://www.instagram.com/repassesgr/", date: "15/03/2026", likes: 87, keywords: ["zafira", "chevrolet", "7lugares", "automatica"] },

@@ -8,7 +8,7 @@ import json
 import os
 import urllib.request
 
-RENDER_API = "https://automa-o-loja.onrender.com"
+RENDER_API = "https://advogadoararaquara.com.br"
 
 
 def imagem_para_b64(caminho):
