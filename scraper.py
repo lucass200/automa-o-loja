@@ -129,11 +129,21 @@ def coletar_perfil_rapido(page, perfil):
                     if longos: legenda = longos[0]
                 except: pass
 
-            # Imagem no lightbox
+            # Imagem no lightbox — baixa via Playwright (sessão logada)
             img_src = ""
+            img_local = ""
             try:
                 img_src = page.locator('[role="dialog"] img, article img').first.get_attribute("src", timeout=2500) or ""
             except: pass
+
+            if img_src:
+                try:
+                    nome_arquivo = f"{PASTA_IMAGENS}/{perfil}_{shortcode}.jpg"
+                    r = page.request.get(img_src)
+                    with open(nome_arquivo, "wb") as f:
+                        f.write(r.body())
+                    img_local = f"/imagens/{perfil}_{shortcode}.jpg"
+                except: pass
 
             palavras = [w.strip('#@').lower() for w in legenda.split() if len(w)>3]
             posts.append({
@@ -143,7 +153,7 @@ def coletar_perfil_rapido(page, perfil):
                 "title":       extrair_titulo(legenda),
                 "description": legenda[:400] or "Sem descrição.",
                 "price":       extrair_preco(legenda),
-                "image":       img_src,
+                "image":       img_local or img_src,
                 "url":         link_post,
                 "date":        time.strftime("%d/%m/%Y"),
                 "likes":       0,
