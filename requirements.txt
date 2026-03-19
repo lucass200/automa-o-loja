@@ -4,3 +4,4 @@ playwright
 schedule
 gunicorn
 gevent
+psycopg2-binary
