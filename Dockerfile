@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 5000
 
 # Inicia o app usando gunicorn na porta fornecida pelo container
-CMD gunicorn --bind 0.0.0.0:$PORT --timeout 600 --workers 1 --worker-class gevent api:app
+CMD gunicorn --bind 0.0.0.0:$PORT --timeout 600 --workers 1 --worker-class sync api:app
