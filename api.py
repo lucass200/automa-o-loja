@@ -174,9 +174,24 @@ def adicionar_post():
 def sync_posts():
     """Substitui todos os posts (enviado pelo scraper local)."""
     from flask import request
+    import base64, hashlib
     lista = request.json
     if not isinstance(lista, list):
         return jsonify({"erro": "Esperado uma lista de posts"}), 400
+    # Processa image_b64 em cada post antes de salvar
+    for post in lista:
+        image_b64 = post.pop("image_b64", "")
+        if image_b64:
+            try:
+                img_bytes = base64.b64decode(image_b64)
+                post_id = post.get("id") or f"ext_{int(datetime.now().timestamp())}"
+                fname = hashlib.md5(post_id.encode()).hexdigest() + ".jpg"
+                fpath = os.path.join(IMAGENS_DIR, fname)
+                with open(fpath, "wb") as f:
+                    f.write(img_bytes)
+                post["image"] = f"/api/imagens/{fname}"
+            except Exception as e:
+                print(f"⚠️ Erro ao salvar imagem no sync: {e}")
     db.salvar_todos_posts(lista)
     todos = db.ler_posts()
     scraper_status["total_posts"]   = sum(1 for d in todos if d.get("tipo") == "post")

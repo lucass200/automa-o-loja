@@ -7,7 +7,19 @@ import os
 import sqlite3
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
-USE_PG = bool(DATABASE_URL)
+
+# Testa conexão PG antes de decidir qual backend usar
+USE_PG = False
+if DATABASE_URL:
+    try:
+        import psycopg2 as _test_pg
+        _conn = _test_pg.connect(DATABASE_URL, connect_timeout=5)
+        _conn.close()
+        USE_PG = True
+        print("✅ Conectado ao Supabase (PostgreSQL)")
+    except Exception as _e:
+        print(f"⚠️ Supabase indisponível, usando SQLite: {_e}")
+        USE_PG = False
 
 LOJAS_DEFAULT = ["repassesgr", "cwb.repasse_", "autopar.repasses"]
 
@@ -17,7 +29,7 @@ if USE_PG:
     import psycopg2.extras
 
     def get_conn():
-        return psycopg2.connect(DATABASE_URL)
+        return psycopg2.connect(DATABASE_URL, connect_timeout=5)
 
     def init_db():
         with get_conn() as conn:

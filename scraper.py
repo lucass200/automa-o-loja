@@ -272,17 +272,29 @@ def carregar_lojas():
     print(f"   📋 Total de lojas para scraper: {len(todas)}")
     return todas
 
-def _baixar_imagem_b64(url):
-    """Baixa imagem de uma URL e retorna base64."""
-    import urllib.request, base64
-    if not url:
+def _imagem_para_b64(image_field):
+    """Converte imagem (local ou URL) para base64."""
+    import urllib.request, base64 as _b64
+    if not image_field:
         return ""
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=8) as r:
-            return base64.b64encode(r.read()).decode()
-    except:
+    # Imagem salva localmente pelo scraper
+    if image_field.startswith("/imagens/") or image_field.startswith("imagens/"):
+        caminho = image_field.lstrip("/").replace("/", os.sep)
+        if not os.path.isabs(caminho):
+            caminho = os.path.join(os.path.dirname(os.path.abspath(__file__)), caminho)
+        if os.path.exists(caminho):
+            with open(caminho, "rb") as f:
+                return _b64.b64encode(f.read()).decode()
         return ""
+    # URL do Instagram CDN
+    if image_field.startswith("http"):
+        try:
+            req = urllib.request.Request(image_field, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                return _b64.b64encode(r.read()).decode()
+        except:
+            return ""
+    return ""
 
 def enviar_para_render(todos):
     """Adiciona posts novos no Render sem apagar os existentes, com imagem embutida."""
@@ -294,9 +306,9 @@ def enviar_para_render(todos):
     for post in todos:
         try:
             payload = dict(post)
-            # Baixa imagem e envia como base64 para o Render hospedar
-            if payload.get("image") and payload["image"].startswith("http"):
-                payload["image_b64"] = _baixar_imagem_b64(payload["image"])
+            b64 = _imagem_para_b64(payload.get("image", ""))
+            if b64:
+                payload["image_b64"] = b64
 
             data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             req = urllib.request.Request(
@@ -305,7 +317,7 @@ def enviar_para_render(todos):
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=15) as r:
+            with urllib.request.urlopen(req, timeout=20) as r:
                 if r.status == 201:
                     enviados += 1
                 else:
