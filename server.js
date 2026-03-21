@@ -9,8 +9,8 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
-// ── Banco de dados ─────────────────────────────────────────────
-const DATABASE_URL = process.env.DATABASE_URL || "";
+// ── Banco de dados (Neon PostgreSQL) ───────────────────────────
+const DATABASE_URL = process.env.DATABASE_URL || "postgresql://neondb_owner:npg_PXkzu0Bji9dn@ep-dark-shape-a4mubkj5-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
 const IMAGENS_DIR = path.join(__dirname, "imagens");
 if (!fs.existsSync(IMAGENS_DIR)) fs.mkdirSync(IMAGENS_DIR);
 
@@ -166,12 +166,18 @@ app.post("/api/posts/add", async (req, res) => {
   try {
     await pool.query(
       `INSERT INTO posts (id, tipo, store, title, description, price, image, url, date, likes, keywords)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       ON CONFLICT (id) DO UPDATE SET
+         title = EXCLUDED.title,
+         description = EXCLUDED.description,
+         price = EXCLUDED.price,
+         image = EXCLUDED.image,
+         date = EXCLUDED.date,
+         keywords = EXCLUDED.keywords`,
       [post.id, post.tipo, post.store, post.title, post.description, post.price, post.image, post.url, post.date, post.likes, post.keywords]
     );
     res.status(201).json({ msg: "Post adicionado!", id: post.id });
   } catch (e) {
-    if (e.code === "23505") return res.json({ msg: "Post já existe", id: post.id });
     res.status(500).json({ erro: e.message });
   }
 });
@@ -181,22 +187,23 @@ app.post("/api/posts/sync", async (req, res) => {
   const lista = req.body;
   if (!Array.isArray(lista)) return res.status(400).json({ erro: "Esperado uma lista de posts" });
 
-  await pool.query("DELETE FROM posts");
   for (const post of lista) {
-    let imageUrl = post.image || "";
-    if (post.image_b64) {
-      const saved = salvarImagemB64(post.id || `ext_${Date.now()}`, post.image_b64);
-      if (saved) imageUrl = saved;
-    }
     const keywords = JSON.stringify(post.keywords || []);
     try {
       await pool.query(
         `INSERT INTO posts (id, tipo, store, title, description, price, image, url, date, likes, keywords)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO NOTHING`,
-        [post.id, post.tipo || "post", post.store, post.title, post.description, post.price || "Consulte", imageUrl, post.url, post.date, post.likes || 0, keywords]
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         ON CONFLICT (id) DO UPDATE SET
+           title = EXCLUDED.title,
+           description = EXCLUDED.description,
+           price = EXCLUDED.price,
+           image = EXCLUDED.image,
+           date = EXCLUDED.date,
+           keywords = EXCLUDED.keywords`,
+        [post.id, post.tipo || "post", post.store, post.title, post.description, post.price || "Consulte", post.image, post.url, post.date, post.likes || 0, keywords]
       );
     } catch (e) {
-      console.error("Erro ao inserir post:", e.message);
+      console.error("Erro ao inserir post no sync:", e.message);
     }
   }
   res.json({ msg: `${lista.length} posts sincronizados!` });
