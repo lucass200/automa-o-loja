@@ -6,24 +6,32 @@ const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuração de Pastas
-const IMAGENS_DIR = path.join(process.cwd(), "imagens");
+// Configuração de Pastas (Debugamos o caminho real aqui)
+const IMAGENS_DIR = path.join(__dirname, "imagens");
 if (!fs.existsSync(IMAGENS_DIR)) {
-  try {
-    fs.mkdirSync(IMAGENS_DIR, { recursive: true });
-    // Tenta dar permissão total na pasta
-    fs.chmodSync(IMAGENS_DIR, 0o777);
-  } catch (e) {
-    console.error("Falha ao criar pasta:", e.message);
-  }
+  fs.mkdirSync(IMAGENS_DIR, { recursive: true });
 }
 
 app.use(cors());
 app.use(express.json({ limit: "200mb" }));
 
+// Rota de DEBUG - Para saber se os arquivos existem
+app.get("/api/debug", (req, res) => {
+  try {
+    const files = fs.readdirSync(IMAGENS_DIR);
+    res.json({
+      caminho: IMAGENS_DIR,
+      total_fotos: files.length,
+      amostra: files.slice(0, 5)
+    });
+  } catch (e) {
+    res.json({ erro: e.message });
+  }
+});
+
 // Servir imagens estáticas
 app.use("/api/imagens", express.static(IMAGENS_DIR));
-app.use(express.static(path.join(process.cwd())));
+app.use(express.static(__dirname));
 
 const DB_CONFIG = {
   host: "127.0.0.1",
@@ -46,39 +54,33 @@ app.get("/api/lojas", (req, res) => {
   res.json(["repassesgr", "cwb.repasse_", "autopar.repasses", "ml_repasses", "parana_repasses"]);
 });
 
-// Sync com ERROS DETALHADOS
 app.post("/api/posts/sync", async (req, res) => {
   const list = req.body;
   let ok = 0, errors = [];
   for (const p of list) {
     try {
-      // Salva imagem ou retorna erro se falhar
-      const imgRes = saveImg(p.id, p.image);
-      if (imgRes.error) throw new Error(`Falha Imagem: ${imgRes.error}`);
-
-      const imgPath = imgRes.path;
+      const imgPath = saveImg(p.id, p.image);
       await pool.query(
         `INSERT INTO posts (id, tipo, store, title, description, price, image, url, date, likes, keywords)
          VALUES (?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE title=VALUES(title), price=VALUES(price), image=VALUES(image)`,
         [p.id, p.tipo, p.store, p.title, p.description, p.price, imgPath, p.url, p.date || new Date(), p.likes || 0, JSON.stringify(p.keywords || [])]
       );
       ok++;
-    } catch (e) { errors.push(`${p.id}: ${e.message}`); }
+    } catch (e) { errors.push(e.message); }
   }
   res.json({ msg: `${ok} posts ok`, errors: errors.slice(0, 5) });
 });
 
 function saveImg(id, base64) {
-  if (!base64 || !base64.includes("base64,")) return { path: base64 };
+  if (!base64 || !base64.includes("base64,")) return base64;
   try {
     const buffer = Buffer.from(base64.split(",")[1], "base64");
     const filename = `img_${id.replace(/\W/g, "_")}.jpg`;
     const fullPath = path.join(IMAGENS_DIR, filename);
-
     fs.writeFileSync(fullPath, buffer);
-    return { path: `/api/imagens/${filename}` };
+    return `/api/imagens/${filename}`;
   } catch (e) {
-    return { path: base64, error: e.message };
+    return base64;
   }
 }
 
@@ -90,7 +92,7 @@ app.get("/api/posts", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(process.cwd(), "index.html"));
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.listen(PORT, () => { console.log("Server ON"); });
