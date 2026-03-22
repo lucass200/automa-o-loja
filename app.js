@@ -63,11 +63,12 @@ if (btnLinkCliente) {
 // ── Carga de dados ─────────────────────────────────────────
 async function carregar() {
     try {
-        const r = await fetch(API_URL + "/api/dados");
+        const r = await fetch(API_URL + "/api/posts");
         if (!r.ok) throw new Error();
         const d = await r.json();
         DATA = d.length ? d : fallback();
         if (DATA === EXEMPLO) noticeEl.style.display = "block";
+        else noticeEl.style.display = "none";
 
         const st = await fetch(API_URL + "/api/status").then(x => x.json()).catch(() => null);
         if (st && statusEl) {
@@ -141,9 +142,9 @@ function render(lista) {
     lista.forEach((c, i) => {
         const cl = cor(c.store);
         const isS = c.tipo === "story";
-        const img = c.image && (c.image.startsWith("data:image") || c.image.startsWith("http"))
+        const img = c.image && (c.image.startsWith("data:image") || c.image.startsWith("http") || c.image.startsWith("/api/"))
             ? c.image
-            : c.image ? `/imagens/${c.image.split(/[/\\]/).pop()}`
+            : c.image ? `/api/imagens/${c.image.split(/[/\\]/).pop()}`
                 : isS ? "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&q=80&w=800"
                     : "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&q=80&w=800";
 
