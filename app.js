@@ -66,7 +66,13 @@ async function carregar() {
         const r = await fetch(API_URL + "/api/posts");
         if (!r.ok) throw new Error();
         const d = await r.json();
-        DATA = d.length ? d : fallback();
+        // Garante que keywords e outros campos sejam interpretados corretamente do Banco
+        DATA = d.map(item => ({
+            ...item,
+            keywords: typeof item.keywords === 'string' ? JSON.parse(item.keywords) : (item.keywords || [])
+        }));
+
+        DATA = DATA.length ? DATA : fallback();
         if (DATA === EXEMPLO) noticeEl.style.display = "block";
         else noticeEl.style.display = "none";
 
