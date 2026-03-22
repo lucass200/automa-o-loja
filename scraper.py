@@ -336,8 +336,8 @@ def enviar_para_render(todos):
              p["image"] = _imagem_para_b64(p["image"]) or p["image"]
         dados_preparados.append(p)
 
-    # Envia em lotes de 50 para não estourar o limite de tamanho de requisição do servidor
-    lote_tamanho = 50
+    # Envia em lotes de 5 para ser o mais leve possível e evitar erro 503/Quota na Hostinger
+    lote_tamanho = 5
     for i in range(0, len(dados_preparados), lote_tamanho):
         lote = dados_preparados[i : i + lote_tamanho]
         try:
